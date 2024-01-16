@@ -136,8 +136,27 @@ class Bin():
     def load(self):
         return np.sum([ np.product(item[1] - item[0]) for item in self.load_items]) / np.product(self.dimensions)
     
+def original_objective(self):
+    leastLoad = 1
+    for k in range(self.num_opend_bins):
+        load = self.Bins[k].load()
+        if load < leastLoad:
+            leastLoad = load
+    return self.num_opend_bins + leastLoad%1
+
+def max_space_objective(self):
+    if self.num_opend_bins < len(self.Bins):
+        return 0.
+    else: 
+        max_x_prime = 0
+        bin = self.Bins[-1]
+        load = self.Bins[-1].load()
+        for lhk, rhk in bin.load_items:
+            max_x_prime = max(max_x_prime, rhk[0])
+        return max_x_prime 
+    
 class PlacementProcedure():
-    def __init__(self, inputs, solution, verbose=False):
+    def __init__(self, inputs, solution, verbose=False, objective="original"):
         self.Bins = [Bin(V) for V in inputs['V']]
         self.boxes = inputs['v']
         self.BPS = np.argsort(solution[:len(self.boxes)])
@@ -153,9 +172,14 @@ class PlacementProcedure():
             print('|    -> Vector of Box Orientations:', self.VBO)
             print('-------------------------------------------------------------------')
         
-        self.infisible = False
+        self.infeasible = False
         self.placement()
-        
+        if objective == "original":
+            self.objective = original_objective
+        elif objective == "max_space":
+            self.objective = max_space_objective
+        else: 
+            self.objective = objective
     
     def placement(self):
         items_sorted = [self.boxes[i] for i in self.BPS]
@@ -183,7 +207,7 @@ class PlacementProcedure():
                 self.num_opend_bins += 1
                 selected_bin = self.num_opend_bins - 1
                 if self.num_opend_bins > len(self.Bins):
-                    self.infisible = True
+                    self.infeasible = True
                     
                     if self.verbose:
                         print('No more bin to open. [Infeasible]')
@@ -197,7 +221,7 @@ class PlacementProcedure():
                 print('Select EMS:', list(map(tuple, selected_EMS)))
                 
             # Box orientation selection
-            BO = self.selecte_box_orientaion(self.VBO[i], box, selected_EMS)
+            BO = self.selected_box_orientation(self.VBO[i], box, selected_EMS)
                 
             # elimination rule for different process
             min_vol, min_dim = self.elimination_rule(items_sorted[i+1:])
@@ -242,7 +266,7 @@ class PlacementProcedure():
         elif BO == 5: return (h, d, w)
         elif BO == 6: return (h, w, d)
         
-    def selecte_box_orientaion(self, VBO, box, EMS):
+    def selected_box_orientation(self, VBO, box, EMS):
         # feasible direction
         BOs = []
         for direction in [1,2,3,4,5,6]:
@@ -282,20 +306,14 @@ class PlacementProcedure():
         return min_vol, min_dim
     
     def evaluate(self):
-        if self.infisible:
+        if self.infeasible:
             return INFEASIBLE
-        
-        leastLoad = 1
-        for k in range(self.num_opend_bins):
-            load = self.Bins[k].load()
-            if load < leastLoad:
-                leastLoad = load
-        return self.num_opend_bins + leastLoad%1
+        return self.objective(self)
     
 
 
 class BRKGA():
-    def __init__(self, inputs, num_generations = 200, num_individuals=120, num_elites = 12, num_mutants = 18, eliteCProb = 0.7, multiProcess = False):
+    def __init__(self, inputs, num_generations = 200, num_individuals=120, num_elites = 12, num_mutants = 18, eliteCProb = 0.7, multiProcess = False, objective = "original"):
         # Setting
         self.multiProcess = multiProcess
         # Input
@@ -311,6 +329,8 @@ class BRKGA():
         self.num_mutants = int(num_mutants)
         self.eliteCProb = eliteCProb
         
+        self.objective = objective
+        
         # Result
         self.used_bins = -1
         self.solution = None
@@ -321,14 +341,14 @@ class BRKGA():
         }
         
     def decoder(self, solution):
-        placement = PlacementProcedure(self.inputs, solution)
+        placement = PlacementProcedure(self.inputs, solution, objective=self.objective)
         return placement.evaluate()
     
     def cal_fitness(self, population):
         fitness_list = list()
 
         for solution in population:
-            decoder = PlacementProcedure(self.inputs, solution)
+            decoder = PlacementProcedure(self.inputs, solution, objective=self.objective)
             fitness_list.append(decoder.evaluate())
         return fitness_list
 

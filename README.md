@@ -476,17 +476,17 @@ def placement_procedure(BPS, VBO):
             selected_EMS = Bins[selected_bin].EMSs[0]
 
         # Box orientation selection
-        BO = selecte_box_orientaion(VBO[i], box, selected_EMS)
+        BO = selected_box_orientation(VBO[i], box, selected_EMS)
             
         # pack the box to the bin & update state information
         # remember it is perform on 
         difference_process(orient(box, BO), selected_EMS, Bins[selected_bin].existing_EMSs)
 ```
 
-where _selecte_box_orientaion_ is the function to compute and select the orientations for the box:
+where _selected_box_orientation_ is the function to compute and select the orientations for the box:
 
 ```python
-def selecte_box_orientaion(BO, box, selected_EMS):
+def selected_box_orientation(BO, box, selected_EMS):
     
     # compute possible direction
     BOs = []
