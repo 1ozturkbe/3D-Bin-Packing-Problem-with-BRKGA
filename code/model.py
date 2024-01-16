@@ -334,7 +334,7 @@ class BRKGA():
 
     def partition(self, population, fitness_list):
         sorted_indexs = np.argsort(fitness_list)
-        return population[sorted_indexs[:self.num_elites]], population[sorted_indexs[self.num_elites:]], fitness_list[sorted_indexs[:self.num_elites]]
+        return population[sorted_indexs[:self.num_elites]], population[sorted_indexs[self.num_elites:]], list(np.array(fitness_list)[sorted_indexs[:self.num_elites]])
     
     def crossover(self, elite, non_elite):
         # chance to choose the gene from elite and non_elite for each gene
@@ -382,16 +382,17 @@ class BRKGA():
             elites, non_elites, elite_fitness_list = self.partition(population, fitness_list)
             
             # Biased Mating & Crossover
-            offsprings = self.mating(elites, non_elites)
-            
+            offsprings = np.array(self.mating(elites, non_elites))
+
             # Generate mutants
-            mutants = self.mutants()
+            mutants = np.array(self.mutants())
 
             # New Population & fitness
-            offspring = np.concatenate((mutants,offsprings), axis=0)
+            offspring = np.concatenate((mutants, offsprings), axis = 0)
+            
             offspring_fitness_list = self.cal_fitness(offspring)
             
-            population = np.concatenate((elites, offsprings), axis = 0)
+            population = np.concatenate((elites, offspring), axis = 0)
             fitness_list = elite_fitness_list + offspring_fitness_list
             
             # Update Best Fitness
